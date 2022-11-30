@@ -9,7 +9,7 @@ defmodule Examples.Stack do
 
   # Client
 
-  def start_link(default) when is_list(default) do
+  def start_link(default) when is_tuple(default) do
     GenServer.start_link(__MODULE__, default)
   end
 
@@ -44,16 +44,76 @@ defmodule Examples.Stack do
   #     :pop -> [head | tail] = state; {:reply, head, tail}
   #   end
   # end
+
+  # @impl true
+  # # @session "X = &{?push(number).!reply(string)}"
+  # @spec handle_call(tuple, tuple, []) :: {:reply, String.t(), [number]}
+  # def handle_call(req, _from, []) do
+  #   case req do
+  #     {:push, element} -> {:reply, "pushed", [element]}
+  #     {_} -> {:reply, "error", []}
+  #   end
+  # end
+
+  # @impl true
+  # # @spec handle_call(tuple, tuple, tuple()) :: {:reply, String.t(), tuple()}
+  # def handle_call(req, _from, {[], []}) do
+  #   case req do
+  #     {:push, element} -> {:reply, "pushed", {[:push] ,[element]}}
+  #     {_} -> {:reply, "error", {[], []}}
+  #   end
+  # end
+
+  # @impl true
+  # @spec handle_call(tuple, tuple, tuple()) :: {:reply, String.t(), tuple()}
+  # def handle_call(req, _from, state) do
+  #   {history, server_state} = state
+  #   [first | tail] = history
+  #   case first do
+  #     :push -> [sec | _] = tail; case sec do
+  #        :push -> case req do
+  #         {:push, element} -> {:reply, "pushed final", {history, [element | server_state]}}
+  #         {:pop} when server_state != [] -> [x | xs] = server_state; {:reply, x, xs}
+  #        end
+  #        _ -> case req do
+  #         {:push, element} -> {:reply, "pushed 2nd", {history ++ [:push] ,[element]}}
+  #         _ -> {:reply, "error", []}
+  #        end
+
+  #       end
+  #     _ -> case req do
+  #        {:push, element} -> {:reply, "pushed base", {[:push] ,[element]}}
+  #        _ -> {:reply, "error", []}
+  #     end
+  #     # _ -> {:reply, "error", []}
+  #   end
+  # end
+
   @impl true
-  # @session "X = &{?push(number).!reply(string)}"
-  @spec handle_call(tuple, tuple, []) :: {:reply, String.t(), [number]}
-  def handle_call(req, _from, []) do
-    case req do
-      {:push, element} -> {:reply, "pushed", [element]}
-      {_} -> {:reply, "error", []}
+  @spec handle_call(tuple, tuple, tuple()) :: {:reply, String.t(), tuple()}
+  def handle_call(req, _from, state) do
+    {history, server_state} = state
+    # [first | tail] = history
+    case history do
+      [:push | tail] -> case tail do
+         [:push | _] -> case req do
+          {:push, element} -> {:reply, "pushed final", {history, [element | server_state]}}
+          {:pop} when server_state != [] -> [x | xs] = server_state; {:reply, x, {history, xs}}
+          _ -> {:reply, "stack empty error", state}
+         end
+         _ -> case req do
+          {:push, element} -> {:reply, "pushed 2nd", {history ++ [:push] ,[element | server_state]}}
+          _ -> {:reply, "error", state}
+         end
+
+        end
+      _ -> case req do
+         {:push, element} -> {:reply, "pushed base", {[:push] ,[element]}}
+         _ -> {:reply, "error", state}
+      end
+      # _ -> {:reply, "error", []}
     end
   end
-
 
 
   # @impl true
@@ -65,9 +125,33 @@ defmodule Examples.Stack do
   # end
   # |> IO.inspect
 
+  # @impl true
+  # def handle_call(req, _from, state) do
+  #   case req do
+  #     {:push, element} -> {:reply, "pushed", [element | state]}
+  #     {:pop} when state != [] -> [head | tail] = state; {:reply, head, tail}
+  #   end
+  # end
+
 
   # @impl true
   # def handle_cast({:push, element}, state) do
   #   {:noreply, [element | state]}
   # end
+
+  # def historyNav(hist) do
+  #   [x | xs] = hist
+  #   case x do
+  #      :push -> [x | xs]; case  do
+  #        ->
+
+  #      end
+
+  #      _ -> {:error}
+
+  #   end
+
+  # end
+
+
 end
