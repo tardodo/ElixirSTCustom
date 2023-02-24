@@ -4,7 +4,7 @@ defmodule Examples.Stack do
 
   use GenServer
 
-
+  @global_session "gS = push(number)"
 
 
   # Client
@@ -31,6 +31,12 @@ defmodule Examples.Stack do
   def init(stack) do
     {:ok, stack}
   end
+
+
+  # @impl true
+  # def handle_call({:push, element}, state) do
+  #   {:reply, "pushed", [element | state]}
+  # end
 
   # @impl true
   # def handle_call(:pop, _from, [head | tail]) do
@@ -91,27 +97,30 @@ defmodule Examples.Stack do
 
   @impl true
   @spec handle_call(tuple, tuple, tuple()) :: {:reply, String.t(), tuple()}
-  def handle_call(req, _from, state) do
-    {history, server_state} = state
-    # [first | tail] = history
-    case history do
-      [:push | tail] -> case tail do
-         [:push | _] -> case req do
-          {:push, element} -> {:reply, "pushed final", {history, [element | server_state]}}
-          {:pop} when server_state != [] -> [x | xs] = server_state; {:reply, x, {history, xs}}
-          _ -> {:reply, "stack empty error", state}
-         end
-         _ -> case req do
-          {:push, element} -> {:reply, "pushed 2nd", {history ++ [:push] ,[element | server_state]}}
-          _ -> {:reply, "error", state}
-         end
+  def handle_call(request, _from, state) do
 
+    {history, server_state} = state
+
+    case history do
+      [{:push, _} | tail] ->
+        case tail do
+          [{:push, _} | _] ->
+            case request do
+              {:push, element} -> {:reply, "pushed final", {history, [element | server_state]}}
+              {:pop} when server_state != [] -> [x | xs] = server_state; {:reply, x, {history, xs}}
+              _ -> {:reply, "stack empty error", state}
+            end
+          _ ->
+            case request do
+              {:push, element} -> {:reply, "pushed 2nd", {history ++ [request] ,[element | server_state]}}
+              _ -> {:reply, "error", state}
+            end
         end
-      _ -> case req do
-         {:push, element} -> {:reply, "pushed base", {[:push] ,[element]}}
-         _ -> {:reply, "error", state}
-      end
-      # _ -> {:reply, "error", []}
+      _ ->
+        case request do
+          {:push, element} -> {:reply, "pushed base", {request ,[element]}}
+          _ -> {:reply, "error", state}
+        end
     end
   end
 

@@ -35,10 +35,24 @@ defmodule ElixirST do
       Module.register_attribute(__MODULE__, :session_type_collection, accumulate: true, persist: true)
       Module.register_attribute(__MODULE__, :dual_unprocessed_collection, accumulate: true, persist: true)
       Module.register_attribute(__MODULE__, :type_specs, accumulate: true, persist: true)
+
+      # define new module session type
+      Module.register_attribute(__MODULE__, :global_session, accumulate: false, persist: false)
+      Module.register_attribute(__MODULE__, :global_session_collection, accumulate: true, persist: true)
+
       @compile :debug_info
 
       @on_definition ElixirST
+      @before_compile ElixirST
       @after_compile ElixirST
+    end
+  end
+
+  # get the global session
+  def __before_compile__(env) do
+    globalSession = Module.get_attribute(env.module, :global_session)
+    unless is_nil(globalSession) do
+      IO.puts("GLOBAL SESSION IS: #{globalSession}")
     end
   end
 
@@ -49,13 +63,13 @@ defmodule ElixirST do
     {name, arity} = env.function
 
     impl = Module.get_attribute(env.module, :impl)
-    unless is_nil(session) do
+    # unless is_nil(session) do
       unless is_nil(impl) do
         Logger.warning("FOUND IMPL TAG HELLOOOOO")
         Logger.warning("FOR FUNC #{name}")
       end
 
-    end
+    # end
 
     # Parse temporary attributes into persistent attributes:
     #      @session        -> @session_type_collection
