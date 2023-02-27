@@ -11,7 +11,7 @@
             "projectDir": "${workspaceRoot}",
             "task": "sessions",
             "taskArgs": [
-                "Examples.PingPong"
+                "Examples.Stack"
             ],
             "startApps": true,
             // "requireFiles": [

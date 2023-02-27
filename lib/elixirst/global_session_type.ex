@@ -452,7 +452,7 @@ defmodule ElixirST.GST do
   """
   @spec string_to_st(String.t()) :: global_session_type()
   def string_to_st(st_string) do
-    ElixirST.Parser.parse(st_string)
+    ElixirST.ParserGlobal.parseGlobal(st_string)
   end
 
   @doc """

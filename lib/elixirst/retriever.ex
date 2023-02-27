@@ -1,6 +1,7 @@
 defmodule ElixirST.Retriever do
   require Logger
   alias ElixirST.ST
+  alias ElixirST.GST
 
   @moduledoc """
   Retrieves bytecode and (session) typechecks it.
@@ -77,6 +78,79 @@ defmodule ElixirST.Retriever do
         dbgi_map[:module],
         options
       )
+    catch
+      {:error, message} ->
+        Logger.error("Error while reading BEAM files: " <> message)
+    end
+  end
+
+  @spec processGlobal(binary, list) :: list
+  def processGlobal(bytecode, options \\ []) do
+    try do
+      # Gets debug_info chunk from BEAM file
+      chunks =
+        case :beam_lib.chunks(bytecode, [:debug_info]) do
+          {:ok, {_mod, chunks}} -> chunks
+          {:error, _, error} -> throw({:error, inspect(error)})
+        end
+
+      # Gets the (extended) Elixir abstract syntax tree from debug_info chunk
+      dbgi_map =
+        case chunks[:debug_info] do
+          {:debug_info_v1, :elixir_erl, metadata} ->
+            case metadata do
+              {:elixir_v1, map, _} ->
+                # Erlang extended AST available
+                map
+
+              {version, _, _} ->
+                throw({:error, "Found version #{version} but expected :elixir_v1."})
+            end
+
+          x ->
+            throw({:error, inspect(x)})
+        end
+
+      # Gets the list of session types, which were stored as attributes in the module
+      session_types = Keyword.get_values(dbgi_map[:attributes], :global_session_collection)
+
+      session_types_parsed =
+        for {name, session_type_string} <- Keyword.values(session_types) do
+          {name, GST.string_to_st(session_type_string)}
+        end
+
+      # Retrieve dual session types (as labels)
+      # duals = Keyword.get_values(dbgi_map[:attributes], :dual_unprocessed_collection)
+
+      # dual_session_types_parsed =
+      #   for {{name, arity}, dual_label} <- duals do
+      #     case Keyword.fetch(session_types, dual_label) do
+      #       {:ok, {{_dual_name, _dual_arity}, session_type}} ->
+      #         dual =
+      #           ST.string_to_st(session_type)
+      #           |> ST.dual()
+
+      #         {{name, arity}, dual}
+
+      #       :error ->
+      #         throw("Dual session type '#{dual_label}' does not exist")
+      #     end
+      #   end
+
+      # function_types = Keyword.get_values(dbgi_map[:attributes], :type_specs)
+
+      # all_functions =
+      #   get_all_functions!(dbgi_map)
+      #   |> add_types_to_functions(to_map(function_types))
+        # |> IO.inspect
+
+      # Session typechecking of each individual function
+      # ElixirST.SessionTypechecking.session_typecheck_module(
+      #   all_functions,
+      #   to_map(session_types_parsed ++ dual_session_types_parsed),
+      #   dbgi_map[:module],
+      #   options
+      # )
     catch
       {:error, message} ->
         Logger.error("Error while reading BEAM files: " <> message)

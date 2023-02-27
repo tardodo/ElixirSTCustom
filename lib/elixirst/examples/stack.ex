@@ -4,7 +4,7 @@ defmodule Examples.Stack do
 
   use GenServer
 
-  @global_session "gS = push(number)"
+  @global_session "gS = push(number).&{push(number), pop()}"
 
 
   # Client
@@ -34,7 +34,9 @@ defmodule Examples.Stack do
 
 
   # @impl true
-  # def handle_call({:push, element}, state) do
+  # @session "X = ?push(number).X"
+  # @spec handle_call({atom(), number}, tuple(), [number]) :: {:reply, String.t(), [number]}
+  # def handle_call({:push, element},_from, state) do
   #   {:reply, "pushed", [element | state]}
   # end
 
@@ -95,6 +97,8 @@ defmodule Examples.Stack do
   #   end
   # end
 
+
+  # CURRENT --------------------------------------------------
   @impl true
   @spec handle_call(tuple, tuple, tuple()) :: {:reply, String.t(), tuple()}
   def handle_call(request, _from, state) do
@@ -124,6 +128,7 @@ defmodule Examples.Stack do
     end
   end
 
+  # -------------------------------------------------------------------
 
   # @impl true
   # def handle_call(req, _from, state) do

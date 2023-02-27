@@ -36,6 +36,7 @@ defmodule Mix.Tasks.Sessions do
 
     for file <- files do
       ElixirST.Retriever.process(file)
+      ElixirST.Retriever.processGlobal(file)
     end
   end
 end

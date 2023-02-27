@@ -1,6 +1,8 @@
 defmodule ElixirST do
+  alias ElixirST.GST
   alias ElixirST.ST
   require ST
+  require GST
   require Logger
 
   @moduledoc """
@@ -52,7 +54,47 @@ defmodule ElixirST do
   def __before_compile__(env) do
     globalSession = Module.get_attribute(env.module, :global_session)
     unless is_nil(globalSession) do
+      name = env.module
       IO.puts("GLOBAL SESSION IS: #{globalSession}")
+
+      all_session_types = Module.get_attribute(env.module, :global_session_collection)
+
+      duplicate_session_types =
+        all_session_types
+        |> Enum.find(nil, fn
+          {^name, _} -> true
+          _ -> false
+        end)
+
+      unless is_nil(duplicate_session_types) do
+        throw("Cannot set multiple session types for the same module #{name}}.")
+      end
+
+      # if kind != :def do
+      #   throw(
+      #     "Session types can only be added to def function. " <>
+      #       "#{name}/#{arity} is defined as defp."
+      #   )
+      # end
+
+      # Ensures that the session type is valid
+      # parsed_session_type = GST.string_to_st(globalSession)
+
+      # case parsed_session_type do
+      #   %ST.Recurse{outer_recurse: true, label: label} ->
+      #     if Keyword.has_key?(all_session_types, label) do
+      #       raise "Cannot have multiple session types with the same label: '#{label}'"
+      #     end
+
+      #     Module.put_attribute(env.module, :session_type_collection, {label, {{name, arity}, session}})
+
+      #   _ ->
+      #     Module.put_attribute(env.module, :session_type_collection, {nil, {{name, arity}, session}})
+      # end
+
+      Module.put_attribute(env.module, :global_session_collection, {nil, {name, globalSession}})
+
+      Module.delete_attribute(env.module, :global_session)
     end
   end
 
@@ -82,6 +124,7 @@ defmodule ElixirST do
 
   def __after_compile__(_env, bytecode) do
     ElixirST.Retriever.process(bytecode)
+    ElixirST.Retriever.processGlobal(bytecode)
   end
 
   # Processes @session attribute - gets the function and session type details
