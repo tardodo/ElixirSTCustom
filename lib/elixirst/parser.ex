@@ -2,13 +2,18 @@ defmodule ElixirST.Parser do
   @moduledoc """
     Parses an input string to session types (as Elixir data).
   """
+  alias ElixirST.GST
   alias ElixirST.ST
   require ST
+  require GST
 
   @typedoc false
   @type session_type :: ST.session_type()
+  @type global_session_type :: GST.global_session_type()
+  @typep global_session_type_tuple :: GST.session_type_tuple()
   @typep session_type_tuple() :: ST.session_type_tuple()
   @typep label :: ST.label()
+  @typep g_label :: GST.label()
 
   @doc """
   Parses a string into a session type data structure
