@@ -66,6 +66,11 @@ defmodule ElixirST.Retriever do
 
       function_types = Keyword.get_values(dbgi_map[:attributes], :type_specs)
 
+      temp_funcs = Keyword.get_values(dbgi_map[:attributes], :temp_type_specs)
+      {_, {args_types, return_type}} = Enum.at(temp_funcs, 0)
+      args_types_converted = ElixirST.TypeOperations.get_type(args_types)
+      return_type_converted = ElixirST.TypeOperations.get_type(return_type)
+
       all_functions =
         get_all_functions!(dbgi_map)
         |> add_types_to_functions(to_map(function_types))
@@ -132,12 +137,12 @@ defmodule ElixirST.Retriever do
 
       #         {{name, arity}, dual}
 
-      #       :error ->
+      #       :error ->s
       #         throw("Dual session type '#{dual_label}' does not exist")
       #     end
       #   end
 
-      # function_types = Keyword.get_values(dbgi_map[:attributes], :type_specs)
+      function_types = Keyword.get_values(dbgi_map[:attributes], :type_specs)
 
       # all_functions =
       #   get_all_functions!(dbgi_map)

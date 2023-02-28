@@ -41,6 +41,7 @@ defmodule ElixirST do
       # define new module session type
       Module.register_attribute(__MODULE__, :global_session, accumulate: false, persist: false)
       Module.register_attribute(__MODULE__, :global_session_collection, accumulate: true, persist: true)
+      Module.register_attribute(__MODULE__, :temp_type_specs, accumulate: true, persist: true)
 
       @compile :debug_info
 
@@ -216,6 +217,14 @@ defmodule ElixirST do
             :type_specs,
             {{name, arity}, {args_types_converted, return_type_converted}}
           )
+
+          # temp
+          Module.put_attribute(
+            env.module,
+            :temp_type_specs,
+            {{name, arity}, {args_types, return_type}}
+          )
+          # Module.delete_attribute(env.module, :temp_type_specs)
 
         _ ->
           # No spec match

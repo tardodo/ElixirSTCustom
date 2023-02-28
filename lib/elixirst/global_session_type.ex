@@ -102,6 +102,7 @@ defmodule ElixirST.GST do
           | %GST.Recurse{label: label(), body: global_session_type()}
           | %GST.Call_Recurse{label: label()}
           | %GST.Terminate{}
+          | %GST.Return{label: label(), types: types(), next: global_session_type()}
 
   @typedoc """
   Session types when stored as tuples. Useful for when converting from Erlang records.
@@ -115,6 +116,7 @@ defmodule ElixirST.GST do
           | {:recurse, atom, session_type_tuple}
           | {:terminate}
           | {:funcall, atom, [atom], session_type_tuple()}
+          | {:return, atom, [atom], session_type_tuple()}
 
   @typedoc """
   Label for sending/receiving statements. Should be of the form of an `atom`.
@@ -291,6 +293,17 @@ defmodule ElixirST.GST do
 
   # function call
   defmodule FunCall do
+    @moduledoc false
+    @enforce_keys [:label]
+    defstruct [:label, types: [], next: %GST.Terminate{}]
+
+    @type global_session_type() :: GST.global_session_type()
+    @type label() :: GST.label()
+    @type types() :: GST.types()
+    @type t :: %__MODULE__{label: label(), types: types(), next: global_session_type()}
+  end
+
+  defmodule Return do
     @moduledoc false
     @enforce_keys [:label]
     defstruct [:label, types: [], next: %GST.Terminate{}]

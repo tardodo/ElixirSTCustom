@@ -19,6 +19,8 @@ session -> branch '{' branch_label_sessions '}'            : #branch{branches='$
 session -> recurse label sequences '(' session ')'         : #recurse{label=unwrap('$2'), body='$5', outer_recurse=false}.
 session -> recurse label '(' session ')'                   : #recurse{label=unwrap('$2'), body='$4', outer_recurse=false}.
 session -> label                                           : #call{label=unwrap('$1')}.
+session -> '{' label ',' types_list '}' sessions           : #return{label=unwrap('$2'), types='$4', next='$6'}.
+session -> '{' label '}' sessions                          : #return{label=unwrap('$2'), types=[], next='$4'}.
 
 sequences -> sequence                                      : nil.
 sequences -> sequences sequence                            : nil.
@@ -52,6 +54,7 @@ Erlang code.
 -record(recurse, {label, body, outer_recurse}).
 -record(call, {label}).
 -record(terminate, {}).
+-record(return, {label, types, next}).
 
 lowercase_atom(V) -> list_to_atom(string:lowercase(atom_to_list(V))).
 

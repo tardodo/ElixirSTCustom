@@ -4,7 +4,8 @@ defmodule Examples.Stack do
 
   use GenServer
 
-  @global_session "gS = push(number).&{push(number), pop()}"
+  @global_session "gS = &{push(number).{reply, string, [number]}.gS,
+                          pop().{reply, number, [number]}.gS}"
 
 
   # Client
@@ -22,7 +23,7 @@ defmodule Examples.Stack do
   end
 
   def pop(pid) do
-    GenServer.call(pid, {:pop})
+    GenServer.cast(pid, {:pop})
   end
 
   # Server (callbacks)
@@ -34,16 +35,23 @@ defmodule Examples.Stack do
 
 
   # @impl true
-  # @session "X = ?push(number).X"
-  # @spec handle_call({atom(), number}, tuple(), [number]) :: {:reply, String.t(), [number]}
+  # # @session "X = ?push(number).X"
+  # @spec handle_call({atom(), number}, any, [number]) :: {:reply, string, [number]}
   # def handle_call({:push, element},_from, state) do
   #   {:reply, "pushed", [element | state]}
   # end
 
-  # @impl true
-  # def handle_call(:pop, _from, [head | tail]) do
-  #   {:reply, head, tail}
-  # end
+  @impl true
+  # @session "X = ?push(number).X"
+  @spec handle_call({atom(), number}, any, [number]) :: {:reply, string, [number]}
+  def handle_call({:push, element},_from, state) do
+    {:reply, "pushed", [element | state]}
+  end
+
+  @impl true
+  def handle_call({:pop}, _from, [head | tail]) do
+    {:reply, head, tail}
+  end
 
   # @impl true
   # def handle_call(req, _from, state) do
@@ -99,34 +107,34 @@ defmodule Examples.Stack do
 
 
   # CURRENT --------------------------------------------------
-  @impl true
-  @spec handle_call(tuple, tuple, tuple()) :: {:reply, String.t(), tuple()}
-  def handle_call(request, _from, state) do
+  # @impl true
+  # @spec handle_call(tuple, tuple, tuple()) :: {:reply, String.t(), tuple()}
+  # def handle_call(request, _from, state) do
 
-    {history, server_state} = state
+  #   {history, server_state} = state
 
-    case history do
-      [{:push, _} | tail] ->
-        case tail do
-          [{:push, _} | _] ->
-            case request do
-              {:push, element} -> {:reply, "pushed final", {history, [element | server_state]}}
-              {:pop} when server_state != [] -> [x | xs] = server_state; {:reply, x, {history, xs}}
-              _ -> {:reply, "stack empty error", state}
-            end
-          _ ->
-            case request do
-              {:push, element} -> {:reply, "pushed 2nd", {history ++ [request] ,[element | server_state]}}
-              _ -> {:reply, "error", state}
-            end
-        end
-      _ ->
-        case request do
-          {:push, element} -> {:reply, "pushed base", {request ,[element]}}
-          _ -> {:reply, "error", state}
-        end
-    end
-  end
+  #   case history do
+  #     [{:push, _} | tail] ->
+  #       case tail do
+  #         [{:push, _} | _] ->
+  #           case request do
+  #             {:push, element} -> {:reply, "pushed final", {history, [element | server_state]}}
+  #             {:pop} when server_state != [] -> [x | xs] = server_state; {:reply, x, {history, xs}}
+  #             _ -> {:reply, "stack empty error", state}
+  #           end
+  #         _ ->
+  #           case request do
+  #             {:push, element} -> {:reply, "pushed 2nd", {history ++ [request] ,[element | server_state]}}
+  #             _ -> {:reply, "error", state}
+  #           end
+  #       end
+  #     _ ->
+  #       case request do
+  #         {:push, element} -> {:reply, "pushed base", {request ,[element]}}
+  #         _ -> {:reply, "error", state}
+  #       end
+  #   end
+  # end
 
   # -------------------------------------------------------------------
 

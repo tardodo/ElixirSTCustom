@@ -109,6 +109,7 @@ defmodule ElixirST.ParserGlobal do
           | {:branch, [session_type_tuple()]}
           | {:call, atom}
           | {:recurse, atom, session_type_tuple(), boolean()}
+          | {:return, atom, any, session_type_tuple()}
           | {:terminate},
           [label()]
         ) :: global_session_type()
@@ -126,8 +127,28 @@ defmodule ElixirST.ParserGlobal do
       _ -> :ok
     end)
 
+    follows = convert_to_structs(next, recurse_var)
+    case follows do
+      %GST.Return{label: _, types: _, next: _} -> %GST.FunCall{label: label, types: checked_types, next: follows}
+      _ -> throw("Function Call #{label} must be followed by a return")
+    end
 
-    %GST.FunCall{label: label, types: checked_types, next: convert_to_structs(next, recurse_var)}
+
+    # %GST.FunCall{label: label, types: checked_types, next: convert_to_structs(next, recurse_var)}
+
+
+  end
+
+  defp convert_to_structs({:return, label, types, next}, recurse_var) do
+    checked_types = Enum.map(types, &ElixirST.TypeOperations.valid_type/1)
+
+    Enum.each(checked_types, fn
+      {:error, incorrect_types} -> throw("Invalid type/s: #{inspect(incorrect_types)}")
+      _ -> :ok
+    end)
+
+
+    %GST.Return{label: label, types: checked_types, next: convert_to_structs(next, recurse_var)}
 
 
   end
