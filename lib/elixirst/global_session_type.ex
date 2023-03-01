@@ -246,7 +246,7 @@ defmodule ElixirST.GST do
               # List (of list) of guards
               guards: [],
               types_known?: false,
-              return_type: :any,
+              return_type: [],
               param_types: []
 
     # Structure of functions in Beam debug_info
@@ -263,7 +263,7 @@ defmodule ElixirST.GST do
             parameters: [any()],
             guards: [any()],
             types_known?: boolean(),
-            return_type: any(),
+            return_type: [any()],
             param_types: [any()]
           }
   end
@@ -282,7 +282,7 @@ defmodule ElixirST.GST do
     @type ast() :: GST.ast()
     @type func_name_arity() :: GST.name_arity()
     @type t :: %__MODULE__{
-            functions: [ST.Function.t()],
+            functions: [GST.Function.t()],
             function_st_context: %{func_name_arity() => global_session_type()},
             module_name: atom(),
             file: String.t(),

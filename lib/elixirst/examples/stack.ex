@@ -4,13 +4,19 @@ defmodule Examples.Stack do
 
   use GenServer
 
-  @global_session "gS = &{push(number).{reply, string, [number]}.gS,
-                          pop().{reply, number, [number]}.gS}"
+  # @global_session "gS = &{push(number).{reply, string, [number]}.gS,
+  #                         pop().{reply, number, [number]}.gS}"
+
+  # @global_session "gS = push(number).#reply().rec X.(&{push(number).#reply(string, [number]).X,
+  #                                                       pop().#reply(number, [number]).X})"
+
+  @global_session "gS = &{push(number).#reply(string, [number]).gS,
+                          pop().#reply(number, [number]).gS}"
 
 
   # Client
 
-  def start_link(default) when is_tuple(default) do
+  def start_link(default) when is_list(default) do
     GenServer.start_link(__MODULE__, default)
   end
 
@@ -23,7 +29,7 @@ defmodule Examples.Stack do
   end
 
   def pop(pid) do
-    GenServer.cast(pid, {:pop})
+    GenServer.call(pid, {:pop})
   end
 
   # Server (callbacks)
@@ -43,12 +49,13 @@ defmodule Examples.Stack do
 
   @impl true
   # @session "X = ?push(number).X"
-  @spec handle_call({atom(), number}, any, [number]) :: {:reply, string, [number]}
+  @spec handle_call({:push, number}, any, [number]) :: {:reply, string, [number]}
   def handle_call({:push, element},_from, state) do
     {:reply, "pushed", [element | state]}
   end
 
   @impl true
+  @spec handle_call({:pop}, any, [number]) :: {:reply, number, [number]}
   def handle_call({:pop}, _from, [head | tail]) do
     {:reply, head, tail}
   end

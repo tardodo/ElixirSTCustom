@@ -81,7 +81,8 @@ defmodule ElixirST.TypeOperations do
     :number
   end
 
-  defp get_type_internal({:{}, _, types}, env), do: {:tuple, Enum.map(types, &get_type(&1, env))}
+  # modified to be internal type
+  defp get_type_internal({:{}, _, types}, env), do: {:tuple, Enum.map(types, &get_type_internal(&1, env))}
 
   defp get_type_internal({variable, _, args}, env) when is_atom(variable) and is_atom(args) do
     if env[:variable_ctx][variable] do

@@ -41,6 +41,7 @@ defmodule ElixirST do
       # define new module session type
       Module.register_attribute(__MODULE__, :global_session, accumulate: false, persist: false)
       Module.register_attribute(__MODULE__, :global_session_collection, accumulate: true, persist: true)
+      Module.register_attribute(__MODULE__, :callback_impl, accumulate: true, persist: true)
       Module.register_attribute(__MODULE__, :temp_type_specs, accumulate: true, persist: true)
 
       @compile :debug_info
@@ -110,6 +111,7 @@ defmodule ElixirST do
       unless is_nil(impl) do
         Logger.warning("FOUND IMPL TAG HELLOOOOO")
         Logger.warning("FOR FUNC #{name}")
+        impl_attribute(name, arity, env)
       end
 
     # end
@@ -125,7 +127,15 @@ defmodule ElixirST do
 
   def __after_compile__(_env, bytecode) do
     ElixirST.Retriever.process(bytecode)
-    ElixirST.Retriever.processGlobal(bytecode)
+    # ElixirST.Retriever.processGlobal(bytecode)
+  end
+
+  defp impl_attribute(name, arity, env) do
+    unless is_nil(name) do
+
+      Module.put_attribute(env.module, :callback_impl, {name, arity})
+      Module.delete_attribute(env.module, :impl)
+    end
   end
 
   # Processes @session attribute - gets the function and session type details

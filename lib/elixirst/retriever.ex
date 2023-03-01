@@ -66,10 +66,10 @@ defmodule ElixirST.Retriever do
 
       function_types = Keyword.get_values(dbgi_map[:attributes], :type_specs)
 
-      temp_funcs = Keyword.get_values(dbgi_map[:attributes], :temp_type_specs)
-      {_, {args_types, return_type}} = Enum.at(temp_funcs, 0)
-      args_types_converted = ElixirST.TypeOperations.get_type(args_types)
-      return_type_converted = ElixirST.TypeOperations.get_type(return_type)
+      # temp_funcs = Keyword.get_values(dbgi_map[:attributes], :temp_type_specs)
+      # {_, {args_types, return_type}} = Enum.at(temp_funcs, 0)
+      # args_types_converted = ElixirST.TypeOperations.get_type(args_types)
+      # return_type_converted = ElixirST.TypeOperations.get_type(return_type)
 
       all_functions =
         get_all_functions!(dbgi_map)
@@ -144,15 +144,40 @@ defmodule ElixirST.Retriever do
 
       function_types = Keyword.get_values(dbgi_map[:attributes], :type_specs)
 
-      # all_functions =
-      #   get_all_functions!(dbgi_map)
-      #   |> add_types_to_functions(to_map(function_types))
-        # |> IO.inspect
+      temp_funcs = Keyword.get_values(dbgi_map[:attributes], :temp_type_specs)
+      {_, {args_types, return_type}} = Enum.at(temp_funcs, 0)
+      args_types_converted = ElixirST.TypeOperations.get_type(args_types)
+      return_type_converted = ElixirST.TypeOperations.get_type(return_type)
 
+      impl_func = Keyword.get_values(dbgi_map[:attributes], :callback_impl)
+
+      unless Enum.empty?(impl_func) do
+        # {_, callback_func_names} = impl_func
+        all_functions =
+          get_implemented_callbacks!(dbgi_map, impl_func)
+          |> add_many_types_to_functions(function_types)
+          |> IO.inspect
+
+        rest = all_functions
+
+        ElixirST.GlobalSessionTypechecking.session_typecheck_module(
+          all_functions,
+          session_types_parsed,
+          dbgi_map[:module],
+          options
+        )
+      end
+
+      # all_functions =
+      #   get_implemented_callbacks!(dbgi_map, callback_func_names)
+      #   |> add_types_to_functions(to_map(function_types))
+      #   |> IO.inspect
+
+      # rest = all_functions
       # Session typechecking of each individual function
       # ElixirST.SessionTypechecking.session_typecheck_module(
       #   all_functions,
-      #   to_map(session_types_parsed ++ dual_session_types_parsed),
+      #   to_map(session_types_parsed),
       #   dbgi_map[:module],
       #   options
       # )
@@ -209,6 +234,38 @@ defmodule ElixirST.Retriever do
     |> to_map()
   end
 
+  defp get_implemented_callbacks!(dbgi_map, names) do
+    dbgi_map[:definitions]
+    |> Enum.filter(fn
+      {{name, _}, _, _, _} -> Keyword.has_key?(names, name) end
+      )
+    |> Enum.map(fn
+      {{name, arity}, def_p, meta, function_body} ->
+        # Unzipping function_body
+        {metas, parameters, guards, bodies} =
+          Enum.reduce(function_body, {[], [], [], []}, fn {curr_m, curr_p, curr_g, curr_b}, {accu_m, accu_p, accu_g, accu_b} ->
+            {[curr_m | accu_m], [curr_p | accu_p], [curr_g | accu_g], [curr_b | accu_b]}
+          end)
+
+        {{name, arity},
+         %GST.Function{
+           name: name,
+           arity: arity,
+           def_p: def_p,
+           meta: meta,
+           cases: length(bodies),
+           case_metas: metas,
+           parameters: parameters,
+           guards: guards,
+           bodies: bodies
+         }}
+
+      x ->
+        throw({:error, "Unknown info for #{inspect(x)}"})
+    end)
+    |> to_map()
+  end
+
   defp add_types_to_functions(all_functions, function_types) do
     for {{name, arity}, function} <- all_functions do
       types = Map.get(function_types, {name, arity}, nil)
@@ -222,4 +279,35 @@ defmodule ElixirST.Retriever do
     end
     |> to_map()
   end
+
+
+defp add_many_types_to_functions(all_functions, function_types) do
+  for {{name, arity}, function} <- all_functions do
+    # types = Map.get(function_types, {name, arity}, nil)
+    types = Enum.filter(function_types,
+              fn {{n, a}, _} -> n == name and a == arity end)
+
+
+    # types =
+    # accp = []
+    # accr = []
+    if not Enum.empty?(types) do
+      # accp = []
+      # accr = []
+      # params_t = (fn {_, {param_types, _}} -> param_types end)
+      # return_t = (fn {_, {_, return_types}} -> return_types end)
+      # params_t = for {_, {param_types, return_type}} <- types do
+
+      #   ^accp = [param_types | accp]
+      #   ^accr = [return_type | accr]
+      # end
+      params_t = Enum.map(types, (fn {_, {param_types, _}} -> param_types end)) |> Enum.reverse()
+      return_t = Enum.map(types, (fn {_, {_, return_types}} -> {return_types} end)) |> Enum.reverse()
+      {{name, arity}, %{function | types_known?: true, return_type: return_t, param_types: params_t}}
+    else
+      {{name, arity}, function}
+    end
+  end
+  |> to_map()
+end
 end

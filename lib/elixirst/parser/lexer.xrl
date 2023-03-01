@@ -11,6 +11,7 @@ SEQUENCE    = \.
 REC         = rec
 LABEL       = [a-zA-Z0-9_/]+
 END         = end|End
+RETURN      = return|\#
 
 Rules.
 
@@ -22,6 +23,7 @@ Rules.
 {REC}          : {token, {recurse, TokenLine}}.
 {END}          : {token, {terminate, TokenLine}}.
 {LABEL}        : {token, {label,  TokenLine, list_to_atom(lists:sublist(TokenChars, 1, TokenLen))}}.
+{RETURN}       : {token, {return, TokenLine}}.
 \=             : {token, {'=',  TokenLine}}.
 \[             : {token, {'[',  TokenLine}}.
 \]             : {token, {']',  TokenLine}}.

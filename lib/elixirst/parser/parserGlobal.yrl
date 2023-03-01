@@ -2,7 +2,7 @@ Nonterminals
 root_session session choice_label_sessions branch_label_sessions types_list types diff_types sequences sessions. 
 
 Terminals
-choice branch sequence label terminate recurse '{' '}' ':' ',' '(' ')' '[' ']' '='.
+choice branch sequence label terminate recurse return '{' '}' ':' ',' '(' ')' '[' ']' '='.
 
 Rootsymbol root_session.
 
@@ -21,6 +21,10 @@ session -> recurse label '(' session ')'                   : #recurse{label=unwr
 session -> label                                           : #call{label=unwrap('$1')}.
 session -> '{' label ',' types_list '}' sessions           : #return{label=unwrap('$2'), types='$4', next='$6'}.
 session -> '{' label '}' sessions                          : #return{label=unwrap('$2'), types=[], next='$4'}.
+session -> return label '(' ')'                            : #return{label=unwrap('$2'), types=[], next=#terminate{}}.
+session -> return label '(' types_list ')'                 : #return{label=unwrap('$2'), types='$4', next=#terminate{}}.
+session -> return label '(' ')' sessions                   : #return{label=unwrap('$2'), types=[], next='$5'}.
+session -> return label '(' types_list ')' sessions        : #return{label=unwrap('$2'), types='$4', next='$6'}.
 
 sequences -> sequence                                      : nil.
 sequences -> sequences sequence                            : nil.
