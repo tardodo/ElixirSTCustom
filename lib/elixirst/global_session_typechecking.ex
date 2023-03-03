@@ -27,6 +27,7 @@ defmodule ElixirST.GlobalSessionTypechecking do
     [{mod, expected_session_type}] = module_session_type
     # for {name, expected_session_type} <- function_session_type do
       function = lookup_function!(all_functions, {:handle_call, 3})
+      all_functions = Map.delete(all_functions, {:init, 1})
 
       %GST.Function{
         types_known?: types_known?
@@ -54,6 +55,73 @@ defmodule ElixirST.GlobalSessionTypechecking do
         # :function_session_type_ctx => function_session_type
       }
 
+      has_branches =
+        case expected_session_type do
+          %GST.Recurse{label: _, body: %GST.Branch{branches: branches}} -> branches
+          _ -> throw("No Branch Specified")
+        end
+
+      num_funcs =
+        Map.values(all_functions)
+        |> Enum.reduce(0, fn x, acc -> x.cases + acc end)
+      # funcs_available =
+      if map_size(has_branches) == num_funcs do
+        resulting_envs =
+          for {body, param, param_t} <- Enum.zip([function.bodies, function.parameters, function.param_types]) do
+            req_param = Enum.at(param, 0)
+            req_param_t = Enum.at(param_t, 0)
+            type_tuple = {req_param, req_param_t}
+            p = param
+            vars = get_vars(req_param, req_param_t)
+            v = vars
+            # t = param_t
+            vars
+            v = Keyword.to_list(vars)
+            keys = Keyword.keys(vars)
+            va = v
+            label = Enum.at(keys, 0)
+            if has_branches[label] do
+              case has_branches[label] do
+                %GST.FunCall{label: label, next: remaining_st, types: t} ->
+                  if length(t) == (length(keys)-1) do
+                    rest_st =
+                      if( length(t) == 0) do
+                        remaining_st
+                      else
+                        [_  | stTypes] = vars
+                        stTypes = Keyword.values(stTypes)
+                        res = List.zip([stTypes, t])
+                        # |> Enum.reduce(fn x -> x end)
+                        nr = Enum.map(res, fn {x, y} -> TypeOperations.equal?(x, y) end)
+                        remaining_st
+                      end
+
+                    variable_ctx =
+                      Enum.zip(param, param_t)
+                      |> Enum.map(fn {var, type} -> TypeOperations.get_vars(var, type) end)
+                     # todo: currently ignoring malformed spec types: {:error, "Incorrect type specification"}
+                      |> List.flatten()
+                      |> Enum.into(%{})
+
+                    branch_env = %{env | variable_ctx: variable_ctx, session_type: rest_st}
+
+
+                    {_ast, res_env} = Macro.prewalk(body, branch_env, &typecheck/2)
+                    res_env
+                  end
+                x -> x
+              end
+            end
+          end
+
+        v = resulting_envs
+
+        # {_, res} = Macro.prewalk()
+      else
+        throw("Number of callbacks in branch does not match")
+      end
+
+      #   Map.get(all_functions, )
       result_env = session_typecheck_by_function(function, env)
 
       # %{
@@ -81,6 +149,68 @@ defmodule ElixirST.GlobalSessionTypechecking do
     # end
   end
 
+  @types [
+    :any,
+    :atom,
+    :binary,
+    :boolean,
+    :number,
+    :pid,
+    :string,
+    :no_return,
+    nil
+  ]
+
+  def get_vars(var, type)
+  def get_vars(_, :any), do: []
+  def get_vars({op, _, _}, type) when op not in [:{}, :%{}, :=, :_, :|], do: {op, type}
+  def get_vars({:_, _, _}, _type), do: []
+  def get_vars({:=, _, [_arg1, _arg2]}, _), do: {:error, "'=' is not supported"}
+  def get_vars([], {:list, _type}), do: []
+  def get_vars([{:|, _, [operand1, operand2]}], {:list, type}), do: [get_vars(operand1, type), get_vars(operand2, {:list, type})]
+  def get_vars({:|, _, [operand1, operand2]}, {:list, type}), do: [get_vars(operand1, type), get_vars(operand2, {:list, type})]
+  def get_vars(op, {:list, type}) when is_list(op), do: Enum.map(op, fn x -> get_vars(x, type) end)
+  def get_vars(_, {:list, _}), do: {:error, "Incorrect type specification"}
+  def get_vars([], _), do: {:error, "Incorrect type specification"}
+  def get_vars({:|, _, _}, _), do: {:error, "Incorrect type specification"}
+
+  def get_vars({:%{}, _, op}, {:map, {_, value_types}}),
+    do:
+      Enum.zip(op, value_types)
+      |> Enum.map(fn {{_, value}, value_type} -> get_vars(value, value_type) end)
+
+  def get_vars({:%{}, _, _}, _), do: {:error, "Incorrect type specification"}
+  def get_vars(_, {:map, {_, _}}), do: {:error, "Incorrect type specification"}
+  def get_vars({:{}, _, ops}, {:tuple, type_list}), do: get_vars_tuple(ops, type_list)
+  def get_vars(ops, {:tuple, type_list}) when is_tuple(ops), do: get_vars_tuple(Tuple.to_list(ops), type_list)
+  def get_vars({:{}, _, _}, _), do: {:error, "Incorrect type specification"}
+  def get_vars(_, {:tuple, _}), do: {:error, "Incorrect type specification"}
+
+  def get_vars(value, type) when type in @types or is_atom(type) do
+    # (is_integer(value) and type == :integer) or
+    # (is_float(value) and type == :float) or
+    literal =
+      (is_nil(value) and type == nil) or
+        (is_boolean(value) and type == :boolean) or
+        (is_number(value) and type == :number) or
+        (is_pid(value) and type == :pid) or
+        (is_binary(value) and type == :binary) or
+        (is_atom(value) and type == :atom)
+
+    if literal do
+      {value, type}
+    else
+      {:error, "Incorrect type specification"}
+    end
+  end
+
+  def get_vars(_, _), do: {:error, "Incorrect type specification"}
+
+  def get_vars_tuple(ops, type_list) do
+    if length(ops) === length(type_list),
+      do: Enum.zip(ops, type_list) |> Enum.map(fn {var, type} -> get_vars(var, type) end),
+      else: {:error, "The number of parameters in tuple does not match the number of types"}
+  end
 
   @spec session_typecheck_by_function(GST.Function.t(), map()) :: no_return()
   def session_typecheck_by_function(%GST.Function{} = function, env) do
@@ -199,6 +329,35 @@ defmodule ElixirST.GlobalSessionTypechecking do
     {node, %{env | type: TypeOperations.typeof(node)}}
   end
 
+  # return
+  def typecheck({:{}, meta, [:reply | args]}, env) do
+    node = {:{}, meta, []}
+
+    {types_list, new_env} =
+      Enum.map(args, fn arg -> elem(Macro.prewalk(arg, env, &typecheck/2), 1) end)
+      |> Enum.reduce_while({[], env}, fn result, {types_list, env_acc} ->
+        case result[:state] do
+          :error ->
+            {:halt, {[], result}}
+
+          _ ->
+            {:cont, {types_list ++ [result[:type]], %{env_acc | variable_ctx: Map.merge(env_acc[:variable_ctx], result[:variable_ctx] || %{})}}}
+        end
+      end)
+
+    rest_st =
+      case env.session_type do
+        %GST.Return{label: :reply, next: remaining_st, types: st_types} ->
+          if TypeOperations.equal?(st_types, types_list) do
+            remaining_st
+          else
+            throw("Types do not match for return")
+          end
+      end
+    types_list = [:atom | types_list]
+    {node, %{new_env | type: {:tuple, types_list}, session_type: rest_st}}
+  end
+
   # Tuples
   def typecheck({:{}, meta, args}, env) when is_list(args) do
     node = {:{}, meta, []}
@@ -217,6 +376,8 @@ defmodule ElixirST.GlobalSessionTypechecking do
 
     {node, %{new_env | type: {:tuple, types_list}}}
   end
+
+
 
   # Tuples (of size 2)
   def typecheck({arg1, arg2}, env) do

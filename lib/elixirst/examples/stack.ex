@@ -2,7 +2,7 @@ defmodule Examples.Stack do
 
   use ElixirST
 
-  use GenServer
+  use STGenServer
 
   # @global_session "gS = &{push(number).{reply, string, [number]}.gS,
   #                         pop().{reply, number, [number]}.gS}"
@@ -10,7 +10,7 @@ defmodule Examples.Stack do
   # @global_session "gS = push(number).#reply().rec X.(&{push(number).#reply(string, [number]).X,
   #                                                       pop().#reply(number, [number]).X})"
 
-  @global_session "gS = &{push(number).#reply(string, [number]).gS,
+  @global_session "gS = &{push(number).#reply(binary, [number]).gS,
                           pop().#reply(number, [number]).gS}"
 
 
@@ -49,14 +49,17 @@ defmodule Examples.Stack do
 
   @impl true
   # @session "X = ?push(number).X"
-  @spec handle_call({:push, number}, any, [number]) :: {:reply, string, [number]}
+  @spec handle_call({:push, number}, any, [number]) :: {:reply, binary, [number]}
   def handle_call({:push, element},_from, state) do
+    # GenServer.reply(from, {:ok, "pushed"})
+    # [_ | newState] = state
     {:reply, "pushed", [element | state]}
   end
 
   @impl true
   @spec handle_call({:pop}, any, [number]) :: {:reply, number, [number]}
   def handle_call({:pop}, _from, [head | tail]) do
+    # GenServer.reply(from, {:ok, head})
     {:reply, head, tail}
   end
 

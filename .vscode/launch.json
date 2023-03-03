@@ -20,6 +20,20 @@
         },
         {
             "type": "mix_task",
+            "name": "mix genserver",
+            "request": "launch",
+            "projectDir": "${workspaceRoot}",
+            "task": "sessions",
+            "taskArgs": [
+                "STGenServer"
+            ],
+            "startApps": true,
+            // "requireFiles": [
+            //     "lib/elixirst/examples/small_example.ex"
+            // ]
+        },
+        {
+            "type": "mix_task",
             "name": "mix other",
             "request": "launch",
             "projectDir": "${workspaceRoot}",
