@@ -25,9 +25,10 @@ defmodule ElixirST.GlobalSessionTypechecking do
     # Logger.debug("Starting session typechecking for module #{inspect(module_name)}")
 
     [{mod, expected_session_type}] = module_session_type
+    all_functions = Map.delete(all_functions, {:init, 1})
     # for {name, expected_session_type} <- function_session_type do
       function = lookup_function!(all_functions, {:handle_call, 3})
-      all_functions = Map.delete(all_functions, {:init, 1})
+
 
       %GST.Function{
         types_known?: types_known?
@@ -54,6 +55,12 @@ defmodule ElixirST.GlobalSessionTypechecking do
         # {name, arity} => rec X.(!A().X)
         # :function_session_type_ctx => function_session_type
       }
+
+      outer_recursive =
+        case expected_session_type do
+          %GST.Recurse{label: label, body: _ , outer_recurse: _} -> label
+          _ -> nil
+        end
 
       has_branches =
         case expected_session_type do
@@ -92,14 +99,14 @@ defmodule ElixirST.GlobalSessionTypechecking do
                         stTypes = Keyword.values(stTypes)
                         res = List.zip([stTypes, t])
                         # |> Enum.reduce(fn x -> x end)
-                        nr = Enum.map(res, fn {x, y} -> TypeOperations.equal?(x, y) end)
+                        nr = Enum.map(res, fn {x, y} -> unless TypeOperations.equal?(x, y) do throw("Parameter types are not equal in Session Type") end end)
+
                         remaining_st
                       end
 
                     variable_ctx =
                       Enum.zip(param, param_t)
                       |> Enum.map(fn {var, type} -> TypeOperations.get_vars(var, type) end)
-                     # todo: currently ignoring malformed spec types: {:error, "Incorrect type specification"}
                       |> List.flatten()
                       |> Enum.into(%{})
 
@@ -107,22 +114,42 @@ defmodule ElixirST.GlobalSessionTypechecking do
 
 
                     {_ast, res_env} = Macro.prewalk(body, branch_env, &typecheck/2)
+                    res_env =
+                      case res_env.session_type do
+                        %GST.Call_Recurse{label: x} when x == outer_recursive ->  %{res_env | session_type: %GST.Terminate{}}
+                      end
+
                     res_env
+                  else
+                    throw("Number of Parameters not equal")
+
                   end
                 x -> x
               end
             end
           end
 
-        v = resulting_envs
+        # v = resulting_envs
+        for func <- resulting_envs do
+          if(func.session_type != %GST.Terminate{}) do
+            throw("Unresolved session type")
+          else
+            # Logger.info("Global Session typechecking for #{mod} terminated successfully")
+          end
+        end
+
 
         # {_, res} = Macro.prewalk()
       else
+        Logger.error("Session typechecking for #{mod} found an error. ")
+        Logger.error("Number of callbacks in branch does not match")
         throw("Number of callbacks in branch does not match")
       end
 
+      Logger.info("Global Session typechecking for #{mod} terminated successfully")
+
       #   Map.get(all_functions, )
-      result_env = session_typecheck_by_function(function, env)
+      # result_env = session_typecheck_by_function(function, env)
 
       # %{
       #   state: result_env[:state],

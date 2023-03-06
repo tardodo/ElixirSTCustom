@@ -156,7 +156,7 @@ defmodule ElixirST.Retriever do
         all_functions =
           get_implemented_callbacks!(dbgi_map, impl_func)
           |> add_many_types_to_functions(function_types)
-          |> IO.inspect
+          # |> IO.inspect
 
         rest = all_functions
 

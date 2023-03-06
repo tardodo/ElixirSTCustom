@@ -39,7 +39,7 @@
             "projectDir": "${workspaceRoot}",
             "task": "sessions",
             "taskArgs": [
-                "Examples.PingPong"
+                "Examples.TestAuction"
             ],
             "startApps": true,
             // "requireFiles": [

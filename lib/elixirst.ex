@@ -127,7 +127,7 @@ defmodule ElixirST do
 
   def __after_compile__(_env, bytecode) do
     ElixirST.Retriever.process(bytecode)
-    # ElixirST.Retriever.processGlobal(bytecode)
+    ElixirST.Retriever.processGlobal(bytecode)
   end
 
   defp impl_attribute(name, arity, env) do

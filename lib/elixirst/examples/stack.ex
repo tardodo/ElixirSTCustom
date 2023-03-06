@@ -4,14 +4,16 @@ defmodule Examples.Stack do
 
   use STGenServer
 
-  # @global_session "gS = &{push(number).{reply, string, [number]}.gS,
+  # @global_session "gS = &{push(number).{reply, binary, [number]}.gS,
   #                         pop().{reply, number, [number]}.gS}"
 
-  # @global_session "gS = push(number).#reply().rec X.(&{push(number).#reply(string, [number]).X,
+  # @global_session "gS = push(number).#reply().rec X.(&{push(number).#reply(binary, [number]).X,
   #                                                       pop().#reply(number, [number]).X})"
 
   @global_session "gS = &{push(number).#reply(binary, [number]).gS,
                           pop().#reply(number, [number]).gS}"
+
+  # @global_session "gS = &{push(number).#reply(binary, [number]).gS}"
 
 
   # Client
@@ -23,6 +25,15 @@ defmodule Examples.Stack do
   # def push(pid, element) do
   #   GenServer.cast(pid, {:push, element})
   # end
+
+  def runner() do
+    {_, pid}= start_link([])
+    push(pid, 5)
+    push(pid, 6)
+    pop(pid)
+
+
+  end
 
   def push(pid, element) do
     GenServer.call(pid, {:push, element})
@@ -53,6 +64,15 @@ defmodule Examples.Stack do
   def handle_call({:push, element},_from, state) do
     # GenServer.reply(from, {:ok, "pushed"})
     # [_ | newState] = state
+
+    # {history, st} = state
+    # case history do
+    #   [:push | sec ] -> {:reply, "pushed", {history ,[element | state]}}
+    #   _ ->
+    #     # hist = history ++ [:push];
+    #     {:reply, "pushed", {history ++ [:push] ,[element | state]}}
+    # end
+
     {:reply, "pushed", [element | state]}
   end
 
