@@ -59,7 +59,6 @@ defmodule Examples.Stack do
   # end
 
   @impl true
-  # @session "X = ?push(number).X"
   @spec handle_call({:push, number}, any, [number]) :: {:reply, binary, [number]}
   def handle_call({:push, element},_from, state) do
     # GenServer.reply(from, {:ok, "pushed"})
@@ -82,6 +81,13 @@ defmodule Examples.Stack do
     # GenServer.reply(from, {:ok, head})
     {:reply, head, tail}
   end
+
+  # @impl true
+  # @spec handle_continue({:push, number}, [number]) :: {:noreply, [number]}
+  # def handle_continue({:push, element}, state) do
+
+  #   {:noreply, [element | state]}
+  # end
 
   # @impl true
   # def handle_call(req, _from, state) do
