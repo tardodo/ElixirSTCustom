@@ -2,7 +2,7 @@ defmodule Examples.Stack do
 
   use ElixirST
 
-  use STGenServer
+  use GenServer
 
   # @global_session "gS = &{push(number).{reply, binary, [number]}.gS,
   #                         pop().{reply, number, [number]}.gS}"
