@@ -10,8 +10,8 @@ defmodule Examples.StackMixed do
   # @global_session "gS = push(number).#reply().rec X.(&{push(number).#reply(binary, [number]).X,
   #                                                       pop().#reply(number, [number]).X})"
 
-  @global_session "gS = &{push(number).#noreply([number]).gS,
-                          pop().#reply(number, [number]).gS}"
+  @global_session "gS = &{push(number).#noreply().gS,
+                          pop().#reply(number).gS}"
 
   # @global_session "gS = &{push(number).#noreply([number]).gS}"
 

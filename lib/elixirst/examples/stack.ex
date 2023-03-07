@@ -10,8 +10,8 @@ defmodule Examples.Stack do
   # @global_session "gS = push(number).#reply().rec X.(&{push(number).#reply(binary, [number]).X,
   #                                                       pop().#reply(number, [number]).X})"
 
-  @global_session "gS = &{push(number).#reply(binary, [number]).gS,
-                          pop().#reply(number, [number]).gS}"
+  @global_session "gS = &{push(number).#reply(binary).gS,
+                          pop().#reply(number).gS}"
 
   # @global_session "gS = &{push(number).#reply(binary, [number]).gS}"
 
@@ -77,9 +77,15 @@ defmodule Examples.Stack do
 
   @impl true
   @spec handle_call({:pop}, any, [number]) :: {:reply, number, [number]}
-  def handle_call({:pop}, _from, [head | tail]) do
+  def handle_call({:pop}, _from, state) do
     # GenServer.reply(from, {:ok, head})
-    {:reply, head, tail}
+
+    # if(state == []) do
+      # {:stop, "Invalid POP", "Empty Stack",[]}
+    # else
+      [head | tail ] = state
+      {:reply, head, tail}
+    # end
   end
 
   # @impl true

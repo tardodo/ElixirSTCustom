@@ -356,10 +356,12 @@ defmodule ElixirST.GlobalSessionTypechecking do
         end
       end)
 
+    replyType = hd(types_list)
+    replyType = [replyType]
     rest_st =
       case env.session_type do
         %GST.Return{label: :reply, next: remaining_st, types: st_types} ->
-          if TypeOperations.equal?(st_types, types_list) do
+          if TypeOperations.equal?(st_types, replyType) do
             remaining_st
           else
             throw("Types do not match for return")
@@ -393,13 +395,53 @@ defmodule ElixirST.GlobalSessionTypechecking do
 
     rest_st =
       case env.session_type do
-        %GST.Return{label: :noreply, next: remaining_st, types: st_types} ->
-          if TypeOperations.equal?(st_types, types_list) do
+        %GST.Return{label: :noreply, next: remaining_st, types: []} -> remaining_st
+
+        _ -> throw("Noreply return cannot have any return types")
+          # if TypeOperations.equal?(st_types, types_list) do
+            # remaining_st
+          # else
+          #   throw("Types do not match for return")
+          # end
+      end
+    types_list = [:atom | types_list]
+    {node, %{new_env | type: {:tuple, types_list}, session_type: rest_st}}
+  end
+
+  # return
+  def typecheck({:{}, meta, [:stop | args]}, env) do
+    node = {:{}, meta, []}
+
+    {types_list, new_env} =
+      Enum.map(args, fn arg -> elem(Macro.prewalk(arg, env, &typecheck/2), 1) end)
+      |> Enum.reduce_while({[], env}, fn result, {types_list, env_acc} ->
+        case result[:state] do
+          :error ->
+            {:halt, {[], result}}
+
+          _ ->
+            {:cont, {types_list ++ [result[:type]], %{env_acc | variable_ctx: Map.merge(env_acc[:variable_ctx], result[:variable_ctx] || %{})}}}
+        end
+      end)
+
+    replyTypes =
+      if length(types_list) == 3 do
+        [first, sec | _] = types_list
+        [first, sec]
+      else
+        [first | _] = types_list
+        [first]
+      end
+    rest_st =
+      case env.session_type do
+        %GST.Return{label: :stop, next: remaining_st, types: st_types} ->
+          if TypeOperations.equal?(st_types, replyTypes) do
             remaining_st
           else
             throw("Types do not match for return")
           end
       end
+
     types_list = [:atom | types_list]
     {node, %{new_env | type: {:tuple, types_list}, session_type: rest_st}}
   end

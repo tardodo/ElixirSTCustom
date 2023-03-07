@@ -53,7 +53,7 @@
             "projectDir": "${workspaceRoot}",
             "task": "sessions",
             "taskArgs": [
-                "Examples.TestAuction"
+                "Examples.AuctionSimple"
             ],
             "startApps": true,
             // "requireFiles": [
