@@ -127,11 +127,14 @@ defmodule ElixirST.ParserGlobal do
       _ -> :ok
     end)
 
-    follows = convert_to_structs(next, recurse_var)
-    case follows do
-      %GST.Return{label: _, types: _, next: _} -> %GST.FunCall{label: label, types: checked_types, next: follows}
-      _ -> throw("Function Call #{label} must be followed by a return")
-    end
+    # follows = convert_to_structs(next, recurse_var)
+    # case follows do
+    #   %GST.Return{label: _, types: _, next: _} -> %GST.FunCall{label: label, types: checked_types, next: follows}
+    #   # %GST.Choice{choices:  }
+    #   _ -> throw("Function Call #{label} must be followed by a return")
+
+    %GST.FunCall{label: label, types: checked_types, next: convert_to_structs(next, recurse_var)}
+    # end
 
 
     # %GST.FunCall{label: label, types: checked_types, next: convert_to_structs(next, recurse_var)}
@@ -209,8 +212,12 @@ defmodule ElixirST.ParserGlobal do
     label
   end
 
+  defp label(%GST.Return{label: label}) do
+    label
+  end
+
   defp label(_) do
-    throw("Following a branch/choice, a send or receive statement is required.")
+    throw("Following a branch/choice, a function call or return statement is required.")
   end
 
   # Performs validations on the session type.

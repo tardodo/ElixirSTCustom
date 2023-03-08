@@ -2,21 +2,21 @@ defmodule Examples.TestAuction do
   use ElixirST
   @moduledoc false
 
-  # @session "auction = !bid(number)
-  #                           .&{?sold().end,
-  #                              ?higher(number).rec X.(+{!quit().end,
-  #                                                !continue().X})}"
   @session "auction = !bid(number)
-                            .rec X.(!huh(number).X)"
+                            .&{?sold().end,
+                               ?higher(number).+{!quit().end,
+                                                 !continue().auction}}"
+  # @session "auction = !bid(number)
+  #                           .rec X.(!huh(number).X)"
   @spec buyer(pid, number) :: atom
   def buyer(auctioneer_pid, amount) do
     send(auctioneer_pid, {:bid, amount})
-    whoever(auctioneer_pid, amount)
-    # receive do
-    #   {:sold} -> :ok
+    # whoever(auctioneer_pid, amount)
+    receive do
+      {:sold} -> :ok
 
-    #   {:higher, value} -> decide(auctioneer_pid, amount, value)
-    # end
+      {:higher, value} -> decide(auctioneer_pid, amount, value)
+    end
   end
 
   @spec whoever(pid, number) :: atom
@@ -34,8 +34,8 @@ defmodule Examples.TestAuction do
   defp decide(auctioneer_pid, amount, value) do
     if value < 100 do
       send(auctioneer_pid, {:continue})
-      # buyer(auctioneer_pid,  amount + 10)
-      decide(auctioneer_pid, amount, value)
+      buyer(auctioneer_pid,  amount + 10)
+      # decide(auctioneer_pid, amount, value)
     else
       send(auctioneer_pid, {:quit})
       :ok

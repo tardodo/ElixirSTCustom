@@ -132,6 +132,7 @@ defmodule ElixirST.GlobalSessionTypechecking do
                       res_env =
                         case res_env.session_type do
                           %GST.Call_Recurse{label: x} when x == outer_recursive ->  %{res_env | session_type: %GST.Terminate{}}
+                          %GST.Terminate{} = y -> y
                         end
 
                       res_env
@@ -358,17 +359,42 @@ defmodule ElixirST.GlobalSessionTypechecking do
 
     replyType = hd(types_list)
     replyType = [replyType]
-    rest_st =
+    %GST.Return{label: :reply, types: expected_types, next: remaining_st} =
       case env.session_type do
-        %GST.Return{label: :reply, next: remaining_st, types: st_types} ->
-          if TypeOperations.equal?(st_types, replyType) do
-            remaining_st
+        %GST.Return{label: :reply} = st ->
+          st
+
+        %GST.Choice{choices: choices} ->
+          if choices[:reply] do
+            choices[:reply]
           else
-            throw("Types do not match for return")
+            throw(
+              # {:error,
+               "Cannot match return in choice"
+            )
           end
+
+        _ ->
+          throw("Error in return or choice.")
       end
+
+    if TypeOperations.equal?(expected_types, replyType) do
+      remaining_st
+    else
+      throw("Types do not match for return")
+    end
+
+    # rest_st =
+    #   case env.session_type do
+    #     %GST.Return{label: :reply, next: remaining_st, types: st_types} ->
+    #       if TypeOperations.equal?(st_types, replyType) do
+    #         remaining_st
+    #       else
+    #         throw("Types do not match for return")
+    #       end
+    #   end
     types_list = [:atom | types_list]
-    {node, %{new_env | type: {:tuple, types_list}, session_type: rest_st}}
+    {node, %{new_env | type: {:tuple, types_list}, session_type: remaining_st}}
   end
 
   # Tuples (of size 2)
@@ -393,19 +419,37 @@ defmodule ElixirST.GlobalSessionTypechecking do
         end
       end)
 
-    rest_st =
+    %GST.Return{label: :noreply, types: [], next: remaining_st} =
       case env.session_type do
-        %GST.Return{label: :noreply, next: remaining_st, types: []} -> remaining_st
+        %GST.Return{label: :noreply, types: []} = st ->
+          st
 
-        _ -> throw("Noreply return cannot have any return types")
-          # if TypeOperations.equal?(st_types, types_list) do
-            # remaining_st
-          # else
-          #   throw("Types do not match for return")
-          # end
+        %GST.Choice{choices: choices} ->
+          if choices[:noreply] do
+            choices[:noreply]
+          else
+            throw(
+              # {:error,
+               "Cannot match return in choice"
+            )
+          end
+
+        _ ->
+          throw( "Error in return for NOREPLY.")
       end
+    # rest_st =
+    #   case env.session_type do
+    #     %GST.Return{label: :noreply, next: remaining_st, types: []} -> remaining_st
+
+    #     _ -> throw("Noreply return cannot have any return types")
+    #       # if TypeOperations.equal?(st_types, types_list) do
+    #         # remaining_st
+    #       # else
+    #       #   throw("Types do not match for return")
+    #       # end
+    #   end
     types_list = [:atom | types_list]
-    {node, %{new_env | type: {:tuple, types_list}, session_type: rest_st}}
+    {node, %{new_env | type: {:tuple, types_list}, session_type: remaining_st}}
   end
 
   # return
@@ -432,18 +476,43 @@ defmodule ElixirST.GlobalSessionTypechecking do
         [first | _] = types_list
         [first]
       end
-    rest_st =
+
+    %GST.Return{label: :stop, types: expected_types, next: remaining_st} =
       case env.session_type do
-        %GST.Return{label: :stop, next: remaining_st, types: st_types} ->
-          if TypeOperations.equal?(st_types, replyTypes) do
-            remaining_st
+        %GST.Return{label: :stop} = st ->
+          st
+
+        %GST.Choice{choices: choices} ->
+          if choices[:stop] do
+            choices[:stop]
           else
-            throw("Types do not match for return")
+            throw(
+              # {:error,
+                "Cannot match return in choice"
+            )
           end
+
+        _ ->
+          throw( "Error in return or choice.")
       end
 
+    if TypeOperations.equal?(expected_types, replyTypes) do
+      remaining_st
+    else
+      throw("Types do not match for return")
+    end
+    # rest_st =
+    #   case env.session_type do
+    #     %GST.Return{label: :stop, next: remaining_st, types: st_types} ->
+    #       if TypeOperations.equal?(st_types, replyTypes) do
+    #         remaining_st
+    #       else
+    #         throw("Types do not match for return")
+    #       end
+    #   end
+
     types_list = [:atom | types_list]
-    {node, %{new_env | type: {:tuple, types_list}, session_type: rest_st}}
+    {node, %{new_env | type: {:tuple, types_list}, session_type: remaining_st}}
   end
 
   # Tuples
@@ -962,24 +1031,33 @@ defmodule ElixirST.GlobalSessionTypechecking do
           {:halt, {:error, message}}
 
         _ ->
-          common_type = TypeOperations.equal?(curr_case[:type], acc[:type])
+          # does not resolve to the same type necessarily
+          # common_type = TypeOperations.equal?(curr_case[:type], acc[:type])
 
-          if common_type == false do
-            {:halt,
-             {:error,
-              "Types #{inspect(curr_case[:type])} and #{inspect(acc[:type])} do not match. Different " <>
-                "cases should have end up with the same type."}}
-          else
-            if ST.equal?(curr_case[:session_type], acc[:session_type]) do
-              {:cont, %{curr_case | type: curr_case[:type]}}
-            else
-              {:halt,
-               {:error,
-                "Mismatch in session type following the case: " <>
-                  "#{ST.st_to_string(curr_case[:session_type])} and " <>
-                  "#{ST.st_to_string(acc[:session_type])}"}}
-            end
+          # session type does not necessarily resolve to same type i.e. for now can have remaining recursive call or terminate
+          # for now ignore terminates as those are successful and follow through with recursive call
+
+          case curr_case[:session_type] do
+            %GST.Call_Recurse{} = _st -> {:cont, curr_case}
+            %GST.Terminate{} -> {:cont, acc}
           end
+
+          # if common_type == false do
+          #   {:halt,
+          #    {:error,
+          #     "Types #{inspect(curr_case[:type])} and #{inspect(acc[:type])} do not match. Different " <>
+          #       "cases should have end up with the same type."}}
+          # else
+          #   if ST.equal?(curr_case[:session_type], acc[:session_type]) do
+          #     {:cont, %{curr_case | type: curr_case[:type]}}
+          #   else
+          #     {:halt,
+          #      {:error,
+          #       "Mismatch in session type following the case: " <>
+          #         "#{ST.st_to_string(curr_case[:session_type])} and " <>
+          #         "#{ST.st_to_string(acc[:session_type])}"}}
+          #   end
+          # end
       end
     end)
   end

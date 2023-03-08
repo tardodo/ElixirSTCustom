@@ -11,7 +11,8 @@ defmodule Examples.StackMixed do
   #                                                       pop().#reply(number, [number]).X})"
 
   @global_session "gS = &{push(number).#noreply().gS,
-                          pop().#reply(number).gS}"
+                          pop().+{#stop(binary, number),
+                                  #reply(number).gS}}"
 
   # @global_session "gS = &{push(number).#noreply([number]).gS}"
 
@@ -55,8 +56,14 @@ defmodule Examples.StackMixed do
 
   @impl true
   @spec handle_call({:pop}, any, [number]) :: {:reply, number, [number]}
-  def handle_call({:pop}, _from, [head | tail]) do
-    {:reply, head, tail}
+  def handle_call({:pop}, _from, state) do
+
+    if state == [] do
+      {:stop, "Illegal POP", 0, []}
+    else
+      [head | tail] = state
+      {:reply, head, tail}
+    end
   end
 
 
