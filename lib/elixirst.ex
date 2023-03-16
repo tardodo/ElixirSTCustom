@@ -128,6 +128,27 @@ defmodule ElixirST do
   def __after_compile__(_env, bytecode) do
     ElixirST.Retriever.process(bytecode)
     ElixirST.Retriever.processGlobal(bytecode)
+    # try do
+    #   :ets.new(:states, [:named_table])
+    # catch
+    #   x ->  IO.puts("THIS IS THE ERROR: #{x}")
+    #         :ets.delete(:states);
+    #         :ets.new(:states, [:named_table, read_concurrency: true])
+    # end
+
+    # :ets.insert(:states, {"foo", "baba"})
+  end
+
+  def stateTrans(mod) do
+    app = Application.get_application(mod)
+    mod = Atom.to_string(mod)
+    mod = String.replace(mod, ".", "_")
+    mod = String.to_atom(mod)
+    # :ets.lookup(mod, "foo")
+    # Application.get_env(app, mod)
+    # env = Application.get_all_env(app)
+    # IO.puts(env)
+    :persistent_term.get(mod)
   end
 
   defp impl_attribute(name, arity, env) do

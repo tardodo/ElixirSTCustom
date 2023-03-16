@@ -124,32 +124,41 @@ defmodule ElixirST.Retriever do
           {name, GST.string_to_st(session_type_string)}
         end
 
-      # Retrieve dual session types (as labels)
-      # duals = Keyword.get_values(dbgi_map[:attributes], :dual_unprocessed_collection)
-
-      # dual_session_types_parsed =
-      #   for {{name, arity}, dual_label} <- duals do
-      #     case Keyword.fetch(session_types, dual_label) do
-      #       {:ok, {{_dual_name, _dual_arity}, session_type}} ->
-      #         dual =
-      #           ST.string_to_st(session_type)
-      #           |> ST.dual()
-
-      #         {{name, arity}, dual}
-
-      #       :error ->s
-      #         throw("Dual session type '#{dual_label}' does not exist")
-      #     end
-      #   end
 
       function_types = Keyword.get_values(dbgi_map[:attributes], :type_specs)
 
       temp_funcs = Keyword.get_values(dbgi_map[:attributes], :temp_type_specs)
-      {_, {args_types, return_type}} = Enum.at(temp_funcs, 0)
-      args_types_converted = ElixirST.TypeOperations.get_type(args_types)
-      return_type_converted = ElixirST.TypeOperations.get_type(return_type)
+      # {_, {args_types, return_type}} = Enum.at(temp_funcs, 0)
+      # args_types_converted = ElixirST.TypeOperations.get_type(args_types)
+      # return_type_converted = ElixirST.TypeOperations.get_type(return_type)
 
       impl_func = Keyword.get_values(dbgi_map[:attributes], :callback_impl)
+
+      name = dbgi_map[:module]
+      type = is_atom(name)
+      name1 = Atom.to_string(name)
+      name2 = String.replace(name1, ".", "_")
+      name = String.to_atom(name2)
+
+    #   try do
+    #     :ets.new(name, [:named_table, :public])
+    #   catch
+    #     x ->  IO.puts("THIS IS THE ERROR: #{x}")
+    #           :ets.delete(name);
+    #           :ets.new(name, [:named_table])
+    #   end
+
+    # :ets.insert(name, {"foo", "baba"})
+    # app = Application.get_application(dbgi_map[:module])
+    # Application.put_env(app, name, "FOO FIGHTERS")
+    # env = Application.get_env(app, name)
+    # IO.puts(env)
+
+    # :persistent_term.put(name, "foo2")
+
+    # loc = :ets.whereis(name)
+    # IO.puts("NAME IS: #{name} and loc is #{loc}")
+    # IO.puts("NAME IS: #{name}")
 
       unless Enum.empty?(impl_func) do
         # {_, callback_func_names} = impl_func
@@ -157,6 +166,8 @@ defmodule ElixirST.Retriever do
           get_implemented_callbacks!(dbgi_map, impl_func)
           |> add_many_types_to_functions(function_types)
           # |> IO.inspect
+
+
 
         rest = all_functions
 
@@ -166,6 +177,17 @@ defmodule ElixirST.Retriever do
           dbgi_map[:module],
           options
         )
+
+        {_, {module, st}} = Enum.at(session_types, 0)
+        # s = st
+        :persistent_term.put(name, st)
+
+        # try do
+        #   :ets.new(:states, [:named_table])
+        # catch
+
+        # end
+
       end
 
       # all_functions =
@@ -237,7 +259,8 @@ defmodule ElixirST.Retriever do
   defp get_implemented_callbacks!(dbgi_map, names) do
     dbgi_map[:definitions]
     |> Enum.filter(fn
-      {{name, _}, _, _, _} -> Keyword.has_key?(names, name) end
+      {{name, arity}, _, _, _} -> (name == :handle_call) and (arity == 4) end
+        # Keyword.has_key?(names, name) and (Keyword.get_values(names, name) != arity)  end
       )
     |> Enum.map(fn
       {{name, arity}, def_p, meta, function_body} ->

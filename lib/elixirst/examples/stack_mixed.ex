@@ -1,6 +1,6 @@
 defmodule Examples.StackMixed do
 
-  use ElixirST
+  # use ElixirST
 
   use GenServer
 
@@ -10,9 +10,9 @@ defmodule Examples.StackMixed do
   # @global_session "gS = push(number).#reply().rec X.(&{push(number).#reply(binary, [number]).X,
   #                                                       pop().#reply(number, [number]).X})"
 
-  @global_session "gS = &{push(number).#noreply().gS,
-                          pop().+{#stop(binary, number),
-                                  #reply(number).gS}}"
+  # @global_session "gS = &{push(number).#noreply().gS,
+  #                         pop().+{#stop(binary, number),
+  #                                 #reply(number).gS}}"
 
   # @global_session "gS = &{push(number).#noreply([number]).gS}"
 

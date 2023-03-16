@@ -38,5 +38,15 @@ defmodule Mix.Tasks.Sessions do
       ElixirST.Retriever.process(file)
       ElixirST.Retriever.processGlobal(file)
     end
+
+    # try do
+    #   :ets.new(:states, [:named_table])
+    # catch
+    #   x ->  IO.puts("THIS IS THE ERROR: #{x}")
+    #         :ets.delete(:states);
+    #         :ets.new(:states, [:named_table, read_concurrency: true])
+    # end
+
+    # :ets.insert(:states, {"foo", "baba"})
   end
 end
