@@ -19,7 +19,7 @@ defmodule Examples.Stack do
 
   @global_session "S = &{push(number).#reply(binary).rec X.(&{push(number).#reply(binary).X,
                                                               pop().+{#stop(binary, binary),
-                                                                       #reply(number).X}})}"
+                                                                       #reply(number).S}})}"
   # @global_session "gS = &{push(number).#reply(binary, [number]).gS}"
 
 
@@ -29,18 +29,18 @@ defmodule Examples.Stack do
     GenServer.start_link(__MODULE__, default)
   end
 
-  def runner() do
-    {_, pid}= start_link([])
-    push(pid, 5)
-    push(pid, 6)
-    pop(pid)
+  # def runner() do
+  #   {_, pid}= start_link([])
+  #   push(pid, 5)
+  #   push(pid, 6)
+  #   pop(pid)
 
 
-  end
+  # end
 
   def push(pid, element) do
     GenServer.call(pid, {:push, element})
-    ElixirST.stateTrans(__MODULE__)
+    # ElixirST.stateTrans(__MODULE__)
   end
 
   def pop(pid) do
@@ -51,13 +51,19 @@ defmodule Examples.Stack do
 
   @impl true
   def init(stack) do
+    ElixirST.StateTable.createTable(__MODULE__)
+
     {:ok, stack}
   end
 
   @impl true
   def handle_call(req, from, state) do
     # fetch curr state
-    handle_call(state, req, from, state)
+    st_state = ElixirST.StateTable.fetchCurrentState(__MODULE__)
+    response = handle_call(st_state, req, from, state)
+    ElixirST.StateTable.transitionState(__MODULE__, st_state, req, response)
+
+    response
 
   end
 

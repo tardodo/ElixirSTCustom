@@ -139,6 +139,17 @@ defmodule ElixirST do
     # :ets.insert(:states, {"foo", "baba"})
   end
 
+  def createStateTable(mod) do
+    app = Application.get_application(mod)
+    mod = Atom.to_string(mod)
+    mod = String.replace(mod, ".", "_")
+    mod = String.to_atom(mod)
+
+    all_sts = :persistent_term.get(:global_st)
+    st = all_sts[mod]
+    st_parsed = GST.string_to_st(st)
+    IO.puts("THIS IS THE ST FOR THE TABLE: #{st}")
+  end
   def stateTrans(mod) do
     app = Application.get_application(mod)
     mod = Atom.to_string(mod)

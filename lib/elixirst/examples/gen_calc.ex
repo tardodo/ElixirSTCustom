@@ -1,5 +1,5 @@
 defmodule Examples.GenCalc do
-  use ElixirST
+  # use ElixirST
   use GenServer
 
 

@@ -6,6 +6,20 @@
     "configurations": [
         {
             "type": "mix_task",
+            "name": "mix run session",
+            "request": "launch",
+            "projectDir": "${workspaceRoot}",
+            "task": "run.session",
+            "taskArgs": [
+                "-S", "mix"
+            ],
+            "startApps": true,
+            // "requireFiles": [
+            //     "lib/elixirst/examples/small_example.ex"
+            // ]
+        },
+        {
+            "type": "mix_task",
             "name": "mix stack",
             "request": "launch",
             "projectDir": "${workspaceRoot}",

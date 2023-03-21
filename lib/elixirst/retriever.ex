@@ -180,7 +180,22 @@ defmodule ElixirST.Retriever do
 
         {_, {module, st}} = Enum.at(session_types, 0)
         # s = st
-        :persistent_term.put(name, st)
+        # :persistent_term.put(name, st)
+
+        all_sts =
+          try do
+            ret = :persistent_term.get(:global_st)
+            ret
+          rescue
+            x -> :persistent_term.put(:global_st, %{}); %{}
+
+          end
+
+        # all_sts = %{all_sts | name: st}
+        all_sts = Map.put(all_sts, name, st)
+        :persistent_term.put(:global_st, all_sts)
+        # :persistent_term.put(name, "foo!!")
+
 
         # try do
         #   :ets.new(:states, [:named_table])
