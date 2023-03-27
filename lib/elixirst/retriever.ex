@@ -274,7 +274,7 @@ defmodule ElixirST.Retriever do
   defp get_implemented_callbacks!(dbgi_map, names) do
     dbgi_map[:definitions]
     |> Enum.filter(fn
-      {{name, arity}, _, _, _} -> (name == :handle_call) and (arity == 4) end
+      {{name, arity}, _, _, _} -> ((name == :handle_call) and (arity == 4)) or ((name == :handle_cast) and (arity == 3)) end
         # Keyword.has_key?(names, name) and (Keyword.get_values(names, name) != arity)  end
       )
     |> Enum.map(fn

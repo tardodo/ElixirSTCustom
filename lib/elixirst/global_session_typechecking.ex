@@ -247,12 +247,13 @@ end
         num + acc
       end)
 
-    function = lookup_function!(functions, {:handle_call, 4})
+    # function = lookup_function!(functions, {:handle_call, 4})
     # same number of branches as functions
     if map_size(has_branches) == num_funcs do
 
       # go through each function
-      # for function <- Map.values(functions) do
+      resulting_st =
+      for function <- Map.values(functions) do
 
         %GST.Function{
           types_known?: types_known?
@@ -378,7 +379,17 @@ end
 
         final_st
       # end
-
+      end
+      result =
+        Enum.reduce_while(resulting_st, hd(resulting_st),
+        fn st, acc ->
+          if st == %GST.Terminate{} do
+            {:cont, st}
+          else
+            throw("Could not evaluate session type")
+          end
+        end)
+      result
     else
       Logger.error("Session typechecking for  found an error. ")
       Logger.error("Number of callbacks in branch does not match")
